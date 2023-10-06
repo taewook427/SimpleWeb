@@ -1,4 +1,4 @@
-# project_lite
+# lite-web
 
 ### 목적
 
