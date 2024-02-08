@@ -13,7 +13,7 @@ function calc0(name, reg, cap) {
     num = reg / cap
     ts = name + "-> 담은수/정원 : " + (num).toString().substring(0, 4)
     ts = ts + ", 정원 보정 : " + (num / 0.8).toString().substring(0, 4)
-    ts = ts + ", 담은수 보정 : " + (num * 0.9).toString().substring(0, 4)
+    ts = ts + ", 담은수 보정 : " + (num * 0.9 / 0.8).toString().substring(0, 4)
     return ts;
 }
 
