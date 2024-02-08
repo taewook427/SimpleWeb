@@ -1,0 +1,49 @@
+body {
+    background-color: royalblue;
+    color: gold;
+    font-family: Arial, sans-serif;
+}
+
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+header img {
+    margin-bottom: 20px;
+}
+
+header h1 {
+    font-size: 2em;
+    margin-bottom: 10px;
+}
+
+header p {
+    margin-bottom: 20px;
+}
+
+input, select {
+    padding: 5px;
+    margin-right: 10px;
+    border: 1px solid navy;
+    background-color: bisque;
+    color: navy;
+    width: 100px;
+}
+
+button {
+    padding: 10px 20px;
+    background-color: bisque;
+    color: navy;
+    border: none;
+    cursor: pointer;
+}
+
+.output {
+    margin-top: 20px;
+}
+
+a {
+    color: gold;
+}
