@@ -14,4 +14,4 @@
 
 - BK 슬롯머신
 
-last update : 2024.01.18
+last update : 2024.02.08
