@@ -1,0 +1,1189 @@
+<!-- python -m http.server 8080 -->
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YAS-web lite</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/water.css">
+    <style>
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .tab-nav {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .tab-nav button {
+            margin: 0;
+            padding: 8px 16px;
+            opacity: 0.7;
+        }
+
+        .tab-nav button.active {
+            opacity: 1;
+            border-bottom: 2px solid var(--text-main);
+            font-weight: bold;
+        }
+
+        .shared-state {
+            padding: 10px;
+            background: var(--background-alt);
+            margin-bottom: 20px;
+            border-radius: 6px;
+        }
+
+        /* compressed tab style */
+        .module-section {
+            margin-bottom: 24px;
+            padding: 16px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .input-group select {
+            margin: 0;
+            min-width: 100px;
+        }
+
+        .file-list {
+            list-style: none;
+            padding: 0;
+            margin-top: 15px;
+        }
+
+        .file-list li {
+            margin-bottom: 8px;
+        }
+
+        .download-btn {
+            display: inline-block;
+            padding: 8px 12px;
+            background: var(--background-alt);
+            border-radius: 4px;
+            text-decoration: none;
+            color: var(--text-main);
+            border: 1px solid var(--border);
+            cursor: pointer;
+            transition: 0.2s;
+            word-break: break-all;
+        }
+
+        .download-btn:hover {
+            background: var(--button-hover);
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- title -->
+    <h1>YAS Web lite</h1>
+    <div class="shared-state">
+        <small>🔑 <strong>Key Status:</strong> Nothing Loaded</small>
+    </div>
+
+    <!-- tab navigation -->
+    <nav class="tab-nav">
+        <button class="active" onclick="switchTab(event, 'tab-zip')">Pack/Unpack</button>
+        <button onclick="switchTab(event, 'tab-sign')">Sign/Verify</button>
+        <button onclick="switchTab(event, 'tab-pw')">PW-Mode</button>
+        <button onclick="switchTab(event, 'tab-pk')">Pub-Mode</button>
+        <button onclick="switchTab(event, 'tab-settings')">Key Settings</button>
+    </nav>
+
+    <!-- compress tab -->
+    <div id="tab-zip" class="tab-content active">
+        <h2>Pack/Unpack 파일 압축 및 해제</h2>
+
+        <div class="module-section">
+            <h3>📦 Pack Files</h3>
+            <p><small>여러 파일을 선택하여 하나의 아카이브로 패키징합니다.</small></p>
+            <div class="input-group">
+                <input type="file" id="zip-input-files" multiple>
+                <select id="zip-pack-type">
+                    <option value="zip1">zip1</option>
+                    <option value="tar1">tar1</option>
+                </select>
+            </div>
+            <button onclick="handleCompress()">Download Archive</button>
+        </div>
+
+        <div class="module-section">
+            <h3>📂 Unpack File</h3>
+            <p><small>아카이브 파일을 업로드하고 해제하여 개별 다운로드합니다.</small></p>
+            <div class="input-group">
+                <input type="file" id="unzip-input-file">
+                <select id="unzip-pack-type">
+                    <option value="zip1">zip1</option>
+                    <option value="tar1">tar1</option>
+                </select>
+            </div>
+            <button class="secondary" onclick="handleExtract()">Unpack Archive</button>
+
+            <ul class="file-list" id="unzip-result-list"></ul>
+        </div>
+    </div>
+
+    <!-- sign tab -->
+    <div id="tab-sign" class="tab-content">
+        <h2>Sign/Verify 서명 및 검증</h2>
+
+        <div class="module-section">
+            <h3>📄 Sign Target File</h3>
+            <p><small>서명하거나 검증할 원본 파일을 선택하세요.</small></p>
+            <input type="file" id="sign-input-file">
+        </div>
+
+        <div class="module-section">
+            <h3>✍️ Signature Result</h3>
+            <textarea id="signature-box" rows="5" placeholder="서명 결과가 표시되거나, 검증할 서명 텍스트를 입력합니다."></textarea>
+            <div class="input-group">
+                <button onclick="downloadSignature()">Download Sign</button>
+                <button class="secondary" onclick="document.getElementById('file-sig-upload').click()">Upload
+                    Sign</button>
+                <input type="file" id="file-sig-upload" style="display:none" onchange="uploadSignature(event)">
+            </div>
+        </div>
+
+        <div class="module-section">
+            <h3>⚙️ Functions</h3>
+            <div class="input-group">
+                <select id="sign-algo">
+                    <option value="rsa1">rsa1</option>
+                    <option value="rsa2">rsa2</option>
+                    <option value="ecc1">ecc1</option>
+                    <option value="pqc1">pqc1</option>
+                </select>
+                <button onclick="handleSign()">Sign</button>
+                <button class="secondary" onclick="handleVerify()">Verify</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- password tab -->
+    <div id="tab-pw" class="tab-content">
+        <h2>PW-mode 비밀번호 모드</h2>
+
+        <div class="module-section">
+            <h3>📥 Input Area</h3>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 250px;">
+                    <label>Public Message</label>
+                    <textarea id="pw-plain-text" rows="2" placeholder="암호화되지 않고 공개되는 메세지"></textarea>
+                    <button class="secondary" onclick="document.getElementById('pw-plain-upload').click()">Load
+                        Text</button>
+                    <input type="file" id="pw-plain-upload" style="display:none"
+                        onchange="readTextToElement(event, 'pw-plain-text')">
+                </div>
+                <div style="flex: 1; min-width: 250px;">
+                    <label>Private Message / Ciphertext</label>
+                    <textarea id="pw-secret-text" rows="2" placeholder="암호화될 비밀 텍스트 또는 복호화할 메세지"></textarea>
+                    <button class="secondary" onclick="document.getElementById('pw-secret-upload').click()">Load
+                        Text</button>
+                    <input type="file" id="pw-secret-upload" style="display:none"
+                        onchange="readTextToElement(event, 'pw-secret-text')">
+                </div>
+            </div>
+            <br>
+            <label>Target Files (Optional. File mode when selected)</label>
+            <div class="input-group">
+                <input type="file" id="pw-target-files" multiple style="flex: 1;">
+                <button class="secondary" onclick="document.getElementById('pw-target-files').value = ''"
+                    style="padding: 4px 10px; font-size: 0.9em;">Clear</button>
+            </div>
+        </div>
+
+        <div class="module-section">
+            <h3>⚙️ Options</h3>
+            <div class="input-group">
+                <select id="pw-opt-img">
+                    <option value="none">No Image</option>
+                    <option value="png">PNG</option>
+                    <option value="webp">WEBP</option>
+                </select>
+                <select id="pw-opt-pack">
+                    <option value="zip1">zip1</option>
+                    <option value="tar1">tar1</option>
+                </select>
+                <select id="pw-opt-sym">
+                    <option value="gcm1">gcm1</option>
+                    <option value="gcmx1">gcmx1</option>
+                </select>
+                <select id="pw-opt-hash">
+                    <option value="arg2">arg2</option>
+                    <option value="pbk2">pbk2</option>
+                    <option value="sha3">sha3</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="module-section">
+            <h3>🔑 Password & Key File</h3>
+            <div class="input-group">
+                <input type="password" id="pw-password" placeholder="비밀번호를 입력하세요" style="flex: 1;">
+                <button class="secondary" onclick="document.getElementById('pw-keyfile-upload').click()">Select Key
+                    File</button>
+                <input type="file" id="pw-keyfile-upload" style="display:none" onchange="loadPwKeyFile(event)">
+            </div>
+            <div class="key-info">
+                <small>Key File: <span id="pw-key-size">0</span> bytes / CRC32: <span id="pw-key-crc">-</span></small>
+            </div>
+        </div>
+
+        <div class="module-section">
+            <button onclick="handlePwEncrypt()">🔒 Encrypt</button>
+            <button class="secondary" onclick="handlePwDecrypt()">🔓 Decrypt</button>
+        </div>
+
+        <div class="module-section">
+            <h3>Output Area</h3>
+            <textarea id="pw-result-text" rows="3" readonly placeholder="텍스트 암/복호화 결과가 여기에 표시됩니다."></textarea>
+            <button class="secondary" onclick="downloadPwResultText()">Download Text</button>
+            <ul class="file-list" id="pw-result-list"></ul>
+        </div>
+    </div>
+
+    <!-- public key tab -->
+    <div id="tab-pk" class="tab-content">
+        <h2>Public Key Cryptography</h2>
+
+        <div class="module-section">
+            <h3>📥 Input Area</h3>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 250px;">
+                    <label>Public Message</label>
+                    <textarea id="pk-plain-text" rows="2" placeholder="암호화되지 않고 공개되는 메세지"></textarea>
+                    <button class="secondary" onclick="document.getElementById('pk-plain-upload').click()">Load
+                        Text</button>
+                    <input type="file" id="pk-plain-upload" style="display:none"
+                        onchange="readTextToElement(event, 'pk-plain-text')">
+                </div>
+                <div style="flex: 1; min-width: 250px;">
+                    <label>Private Message / Ciphertext</label>
+                    <textarea id="pk-secret-text" rows="2" placeholder="암호화될 비밀 텍스트 또는 복호화할 메세지"></textarea>
+                    <button class="secondary" onclick="document.getElementById('pk-secret-upload').click()">Load
+                        Text</button>
+                    <input type="file" id="pk-secret-upload" style="display:none"
+                        onchange="readTextToElement(event, 'pk-secret-text')">
+                </div>
+            </div>
+            <br>
+            <label>Target Files (Optional. File mode when selected)</label>
+            <div class="input-group">
+                <input type="file" id="pk-target-files" multiple style="flex: 1;">
+                <button class="secondary" onclick="clearPkFileSelection()">Clear</button>
+            </div>
+        </div>
+
+        <div class="module-section">
+            <h3>⚙️ Options</h3>
+            <div class="input-group">
+                <select id="pk-opt-img">
+                    <option value="none">No Image</option>
+                    <option value="png">PNG</option>
+                    <option value="webp">WEBP</option>
+                </select>
+                <select id="pk-opt-pack">
+                    <option value="zip1">zip1</option>
+                    <option value="tar1">tar1</option>
+                </select>
+                <select id="pk-opt-sym">
+                    <option value="gcm1">gcm1</option>
+                    <option value="gcmx1">gcmx1</option>
+                </select>
+                <select id="pk-opt-asym">
+                    <option value="rsa1">rsa1</option>
+                    <option value="rsa2">rsa2</option>
+                    <option value="ecc1">ecc1</option>
+                    <option value="pqc1">pqc1</option>
+                </select>
+                <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                    <input type="checkbox" id="pk-opt-sign"> Enable Sign/Verify
+                </label>
+            </div>
+        </div>
+
+        <div class="module-section">
+            <h3>🔑 Authentication and Keys</h3>
+            <p><small>로드된 키를 자동으로 사용합니다.</small></p>
+            <ul>
+                <li><strong>Encrypt:</strong> Peer Public <small>(required)</small> / My Private
+                    <small>(optional)</small>
+                </li>
+                <li><strong>Decrypt:</strong> My Private <small>(required)</small> / Peer Public & My Public
+                    <small>(optional)</small>
+                </li>
+            </ul>
+        </div>
+
+        <div class="module-section">
+            <button onclick="handlePkEncrypt()">🔒 Encrypt</button>
+            <button class="secondary" onclick="handlePkDecrypt()">🔓 Decrypt</button>
+        </div>
+
+        <div class="module-section">
+            <h3>Output Area</h3>
+            <textarea id="pk-result-text" rows="3" readonly placeholder="텍스트 암/복호화 결과가 여기에 표시됩니다."></textarea>
+            <button class="secondary" onclick="downloadPkResultText()">Download Text</button>
+            <ul class="file-list" id="pk-result-list"></ul>
+        </div>
+    </div>
+
+    <!-- key settings tab -->
+    <div id="tab-settings" class="tab-content">
+        <h2>Key Settings</h2>
+
+        <div class="module-section">
+            <h3>👤 Peer Public Key</h3>
+            <textarea id="key-peer-pub" rows="3" placeholder="상대방의 공개키를 입력하거나 업로드하세요."
+                oninput="updateKeyMetrics('peer-pub')"></textarea>
+            <div class="key-info">
+                <small>Size: <span id="info-peer-pub-size">0</span> bytes / CRC32: <span
+                        id="info-peer-pub-crc">-</span></small>
+            </div>
+            <div class="input-group">
+                <button onclick="downloadKey('peer-pub')">Download Key</button>
+                <button class="secondary" onclick="document.getElementById('file-peer-pub').click()">Upload Key</button>
+                <input type="file" id="file-peer-pub" style="display:none" onchange="uploadKey(event, 'peer-pub')">
+            </div>
+        </div>
+
+        <div class="module-section">
+            <h3>🏠 My Public Key</h3>
+            <textarea id="key-my-pub" rows="3" placeholder="나의 공개키입니다." oninput="updateKeyMetrics('my-pub')"></textarea>
+            <div class="key-info">
+                <small>Size: <span id="info-my-pub-size">0</span> bytes / CRC32: <span
+                        id="info-my-pub-crc">-</span></small>
+            </div>
+            <div class="input-group">
+                <button onclick="downloadKey('my-pub')">Download Key</button>
+                <button class="secondary" onclick="document.getElementById('file-my-pub').click()">Upload Key</button>
+                <input type="file" id="file-my-pub" style="display:none" onchange="uploadKey(event, 'my-pub')">
+            </div>
+        </div>
+
+        <div class="module-section">
+            <h3>🔒 My Private Key</h3>
+            <textarea id="key-my-pri" rows="3" placeholder="나의 개인키입니다. 보안에 주의하세요."
+                oninput="updateKeyMetrics('my-pri')"></textarea>
+            <div class="key-info">
+                <small>Size: <span id="info-my-pri-size">0</span> bytes / CRC32: <span
+                        id="info-my-pri-crc">-</span></small>
+            </div>
+            <div class="input-group">
+                <button onclick="downloadKey('my-pri')">Download Key</button>
+                <button class="secondary" onclick="document.getElementById('file-my-pri').click()">Upload Key</button>
+                <input type="file" id="file-my-pri" style="display:none" onchange="uploadKey(event, 'my-pri')">
+            </div>
+        </div>
+
+        <div class="module-section">
+            <h3>🆕 Generate Key Pair</h3>
+            <div class="input-group">
+                <select id="gen-algo">
+                    <option value="rsa1">rsa1</option>
+                    <option value="rsa2">rsa2</option>
+                    <option value="ecc1">ecc1</option>
+                    <option value="pqc1">pqc1</option>
+                </select>
+                <button onclick="handleGenKey()">Generate Key</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- common helper -->
+    <script>
+        // tab switch
+        function switchTab(event, tabId) {
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('.tab-nav button').forEach(b => b.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            event.currentTarget.classList.add('active');
+        }
+
+        // downloader
+        function triggerDownload(blob, filename) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+    </script>
+
+    <!-- zip tab -->
+    <script type="module">
+        // import module
+        import { ZipWriter, ZipReader } from 'https://cdn.jsdelivr.net/gh/k-atusa/USAG-Lib/Szip/Szip.js';
+        import { TarWriter, TarReader } from 'https://cdn.jsdelivr.net/gh/k-atusa/USAG-Lib/Star/Star.js';
+
+        window.handleCompress = async function () {
+            const fileInput = document.getElementById('zip-input-files');
+            const packType = document.getElementById('zip-pack-type').value;
+            const files = fileInput.files;
+            if (files.length === 0) {
+                alert("Please select at least one file to compress.");
+                return;
+            }
+
+            try {
+                if (packType === 'zip1') {
+                    const writer = new ZipWriter(`archive.zip`, true);
+                    for (let i = 0; i < files.length; i++) {
+                        await writer.WriteFile(files[i].name, files[i]);
+                    }
+                    await writer.Close(); // auto download
+                }
+                else if (packType === 'tar1') {
+                    const writer = new TarWriter(`archive.tar`);
+                    for (let i = 0; i < files.length; i++) {
+                        await writer.Write(files[i].name, files[i], false);
+                    }
+                    await writer.Close(); // auto download
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Compressing Error: " + err.message);
+            }
+        };
+
+        window.handleExtract = async function () {
+            const fileInput = document.getElementById('unzip-input-file');
+            const packType = document.getElementById('unzip-pack-type').value;
+            const file = fileInput.files[0];
+            const resultList = document.getElementById('unzip-result-list');
+            if (!file) {
+                alert("Please select a file to decompress.");
+                return;
+            }
+
+            resultList.innerHTML = "<li>⏳ Decompressing...</li>";
+
+            try {
+                let extractedFiles = [];
+
+                if (packType === 'zip1') {
+                    const reader = new ZipReader(file);
+                    await reader.Init();
+                    for (let i = 0; i < reader.Names.length; i++) {
+                        const data = await reader.Read(i);
+                        extractedFiles.push({ path: reader.Names[i], data: new Blob([data]) });
+                    }
+                    reader.Close();
+                }
+                else if (packType === 'tar1') {
+                    const reader = new TarReader(file);
+                    await reader.Init();
+                    for (let i = 0; i < reader.Files.length; i++) {
+                        if (reader.Files[i].IsDir) continue;
+                        const data = reader.Read(i);
+                        extractedFiles.push({ path: reader.Files[i].Name, data: new Blob([data]) });
+                    }
+                    reader.Close();
+                }
+
+                // UI File list
+                resultList.innerHTML = "";
+                extractedFiles.forEach(extFile => {
+                    const flatFileName = extFile.path.replace(/[/\\]/g, '.'); // replace dir separator with dot
+                    const li = document.createElement('li');
+                    const a = document.createElement('a');
+
+                    a.href = URL.createObjectURL(extFile.data);
+                    a.download = flatFileName;
+                    a.className = "download-btn";
+                    a.innerHTML = `📄 <strong>${flatFileName}</strong> <small>(Download)</small>`;
+
+                    li.appendChild(a);
+                    resultList.appendChild(li);
+                });
+
+            } catch (err) {
+                console.error(err);
+                resultList.innerHTML = `<li>❌ Decompressing Error: ${err.message}</li>`;
+            }
+        };
+    </script>
+
+    <!-- sign tab -->
+    <script type="module">
+        // import module
+        import { AsymMaster } from 'https://cdn.jsdelivr.net/gh/k-atusa/USAG-Lib/Bencrypt/Bencrypt.js';
+        import { Encode64, Decode64 } from 'https://cdn.jsdelivr.net/gh/k-atusa/USAG-Lib/Bencode/Bencode.js';
+
+        // sign with my private
+        window.handleSign = async function () {
+            const fileInput = document.getElementById('sign-input-file');
+            const sigBox = document.getElementById('signature-box');
+            const algo = document.getElementById('sign-algo').value;
+            const priKeyText = document.getElementById('key-my-pri').value;
+            if (!fileInput.files[0] || !priKeyText) {
+                return alert("Please select a file and provide a private key.");
+            }
+
+            try {
+                const am = new AsymMaster(algo);
+                const priKeyBin = Decode64(priKeyText, "#");
+                await am.Loadkey(null, priKeyBin);
+
+                const fileData = new Uint8Array(await fileInput.files[0].arrayBuffer());
+                const signature = await am.Sign(fileData);
+                sigBox.value = Encode64(signature, "#");
+                alert("Signature created successfully.");
+            } catch (e) {
+                alert("Signature Error: " + e.message);
+            }
+        };
+
+        // verify with peer's public key
+        window.handleVerify = async function () {
+            const fileInput = document.getElementById('sign-input-file');
+            const sigBox = document.getElementById('signature-box');
+            const algo = document.getElementById('sign-algo').value;
+            const pubKeyText = document.getElementById('key-peer-pub').value;
+            if (!fileInput.files[0] || !sigBox.value || !pubKeyText) {
+                return alert("Please select a file, provide a signature, and provide a public key.");
+            }
+
+            try {
+                const am = new AsymMaster(algo);
+                const pubKeyBin = Decode64(pubKeyText, "#");
+                await am.Loadkey(pubKeyBin, null);
+
+                const fileData = new Uint8Array(await fileInput.files[0].arrayBuffer());
+                const sigBin = Decode64(sigBox.value, "#");
+                const isValid = await am.Verify(fileData, sigBin);
+
+                if (isValid) {
+                    alert("✅ Verification Success: The signature is valid.");
+                } else {
+                    alert("❌ Verification Failed: The signature is invalid or the file has been tampered with.");
+                }
+            } catch (e) {
+                alert("Verification Error: " + e.message);
+            }
+        };
+
+        // download signature
+        window.downloadSignature = function () {
+            const text = document.getElementById('signature-box').value;
+            if (!text) return alert("No signature data to download.");
+            triggerDownload(new Blob([text]), "signature.txt");
+        };
+
+        // upload signature
+        window.uploadSignature = function (event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => document.getElementById('signature-box').value = e.target.result;
+            reader.readAsText(file);
+        };
+    </script>
+
+    <!-- password tab -->
+    <script type="module">
+        // import module
+        import { Opsec, Crc32 } from 'https://cdn.jsdelivr.net/gh/k-atusa/USAG-Lib/Opsec/Opsec.js';
+        import { SymMaster, HashMaster, TestReader, TestWriter } from 'https://cdn.jsdelivr.net/gh/k-atusa/USAG-Lib/Bencrypt/Bencrypt.js';
+        import { Encode64, Decode64 } from 'https://cdn.jsdelivr.net/gh/k-atusa/USAG-Lib/Bencode/Bencode.js';
+        import { ZipWriter, ZipReader } from 'https://cdn.jsdelivr.net/gh/k-atusa/USAG-Lib/Szip/Szip.js';
+        import { TarWriter, TarReader } from 'https://cdn.jsdelivr.net/gh/k-atusa/USAG-Lib/Star/Star.js';
+
+        window.currentPwKeyBuffer = new Uint8Array(0);
+
+        // safe download function
+        function safeDownload(blob, filename) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => {
+                if (document.body.contains(a)) document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }, 150);
+        }
+
+        // get image header
+        async function getPrehead(imgType) {
+            if (imgType === 'none' || imgType === 'bin') return new Uint8Array(0);
+            const iconRes = await fetch(`https://cdn.jsdelivr.net/gh/k-atusa/USAG-Lib/Icons/data/aes_${imgType}.${imgType}`);
+            const iconBuf = new Uint8Array(await iconRes.arrayBuffer());
+            const padLen = 128 - (iconBuf.length % 128);
+            const prehead = new Uint8Array(iconBuf.length + padLen);
+            prehead.set(iconBuf);
+            return prehead;
+        }
+
+        // clear file selection utility
+        window.clearFileSelection = function () {
+            document.getElementById('pw-target-files').value = "";
+            document.getElementById('pw-result-list').innerHTML = "";
+        };
+
+        // read text to element
+        window.readTextToElement = function (event, elementId) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => document.getElementById(elementId).value = e.target.result;
+            reader.readAsText(file);
+        };
+
+        // download password result text
+        window.downloadPwResultText = function () {
+            const text = document.getElementById('pw-result-text').value;
+            if (!text) return alert("No text to download.");
+            safeDownload(new Blob([text], { type: "text/plain" }), "yas-msg.txt");
+        };
+
+        // load key file (1024 bytes limit)
+        window.loadPwKeyFile = async function (event) {
+            const file = event.target.files[0];
+            if (!file) {
+                window.currentPwKeyBuffer = new Uint8Array(0);
+                document.getElementById('pw-key-crc').innerText = '-';
+                document.getElementById('pw-key-size').innerText = '0';
+                return;
+            }
+            const buffer = await file.arrayBuffer();
+            window.currentPwKeyBuffer = new Uint8Array(buffer).slice(0, 1024);
+            document.getElementById('pw-key-crc').innerText = Crc32(window.currentPwKeyBuffer).toUpperCase();
+            document.getElementById('pw-key-size').innerText = window.currentPwKeyBuffer.length;
+        };
+
+        // --- 🔒 Encrypt ---
+        window.handlePwEncrypt = async function () {
+            // get UI values
+            const plainMsg = document.getElementById('pw-plain-text').value;
+            const secretMsg = document.getElementById('pw-secret-text').value;
+            const files = document.getElementById('pw-target-files').files;
+            const password = document.getElementById('pw-password').value;
+
+            const imgType = document.getElementById('pw-opt-img').value;
+            const packAlgo = document.getElementById('pw-opt-pack').value;
+            const symAlgo = document.getElementById('pw-opt-sym').value;
+            const hashAlgo = document.getElementById('pw-opt-hash').value;
+
+            try {
+                // make opsec object
+                const op = new Opsec();
+                op.Msg = plainMsg;
+                op.Smsg = secretMsg;
+                op.BodyInfo = new TextEncoder().encode(packAlgo);
+
+                if (files.length > 0) { // if files are selected
+                    document.getElementById('pw-result-text').value = "⏳ Encrypting files...";
+
+                    // pack files
+                    let packedBuffer;
+                    if (packAlgo === 'zip1') {
+                        const writer = new ZipWriter("", true);
+                        for (let i = 0; i < files.length; i++) await writer.WriteFile(files[i].name, files[i]);
+                        packedBuffer = await writer.Close();
+                    } else {
+                        const writer = new TarWriter("");
+                        for (let i = 0; i < files.length; i++) await writer.Write(files[i].name, files[i], false);
+                        packedBuffer = await writer.Close();
+                    }
+
+                    // set body size and algo
+                    const dummySm = new SymMaster(symAlgo, new Uint8Array(44));
+                    op.BodySize = dummySm.AfterSize(packedBuffer.length);
+                    op.BodyAlgo = symAlgo;
+
+                    // encrypt header
+                    const header = await op.Encpw(hashAlgo, password, window.currentPwKeyBuffer);
+                    const sm = new SymMaster(symAlgo, op.BodyKey);
+                    const encryptedBody = await sm.EnBin(packedBuffer);
+
+                    // write header and body
+                    const writer = new TestWriter();
+                    await op.Write(writer, header);
+                    await writer.write(encryptedBody);
+                    let yasData = writer.getValue();
+
+                    // wrap with prehead
+                    const prehead = await getPrehead(imgType);
+                    const wrapped = new Uint8Array(prehead.length + yasData.length);
+                    wrapped.set(prehead);
+                    wrapped.set(yasData, prehead.length);
+
+                    // download
+                    document.getElementById('pw-result-text').value = "✅ File encryption completed.";
+                    safeDownload(new Blob([wrapped]), `encrypted.${imgType === 'none' ? 'yas' : imgType}`);
+
+                } else { // text mode encryption
+                    document.getElementById('pw-result-text').value = "⏳ Encrypting text...";
+                    const header = await op.Encpw(hashAlgo, password, window.currentPwKeyBuffer);
+
+                    // write header
+                    const writer = new TestWriter();
+                    await op.Write(writer, header);
+                    document.getElementById('pw-result-text').value = Encode64(writer.getValue(), "#", 80, 10);
+                }
+
+            } catch (e) { alert("Encryption failed: " + e.message); }
+        };
+
+        // --- 🔓 Decrypt ---
+        window.handlePwDecrypt = async function () {
+            // get UI values
+            const password = document.getElementById('pw-password').value;
+            const files = document.getElementById('pw-target-files').files;
+            const secretBoxText = document.getElementById('pw-secret-text').value;
+            const resultTextArea = document.getElementById('pw-result-text');
+            const resultList = document.getElementById('pw-result-list');
+
+            try {
+                // make opsec object
+                const op = new Opsec();
+                let headerData;
+                let fileReader = null;
+
+                if (files.length > 0) { // file mode
+                    resultList.innerHTML = "<li>⏳ Decrypting file...</li>";
+                    const fileData = new Uint8Array(await files[0].arrayBuffer());
+                    fileReader = new TestReader(fileData);
+                    headerData = await op.Read(fileReader);
+                } else { // text mode
+                    if (!secretBoxText.includes('#START#')) return alert("암호문(#START#)이 필요합니다.");
+                    const rawData = Decode64(secretBoxText, "#");
+                    const textReader = new TestReader(rawData);
+                    headerData = await op.Read(textReader);
+                }
+
+                // view header, decrypt
+                op.View(headerData);
+                await op.Decpw(password, window.currentPwKeyBuffer);
+
+                // show message
+                let combinedMsg = "";
+                if (op.Msg) combinedMsg += `[Public Message]\n${op.Msg}\n\n`;
+                if (op.Smsg) combinedMsg += `[Secure Message]\n${op.Smsg}`;
+                resultTextArea.value = combinedMsg || "No decrypted message.";
+
+                // file mode
+                if (files.length > 0 && op.BodySize >= 0 && fileReader) {
+                    // get body info
+                    const symAlgo = op.BodyAlgo;
+                    const packAlgo = new TextDecoder().decode(op.BodyInfo) || "zip1";
+                    const encBody = await fileReader.read(op.BodySize);
+
+                    // decrypt body
+                    const sm = new SymMaster(symAlgo, op.BodyKey);
+                    const packedBody = await sm.DeBin(encBody);
+
+                    // extract files
+                    let extractedFiles = [];
+                    if (packAlgo === 'zip1') {
+                        const zReader = new ZipReader(packedBody);
+                        await zReader.Init();
+                        for (let i = 0; i < zReader.Names.length; i++) extractedFiles.push({ path: zReader.Names[i], data: new Blob([await zReader.Read(i)]) });
+                    } else {
+                        const tReader = new TarReader(packedBody);
+                        await tReader.Init();
+                        for (let i = 0; i < tReader.Files.length; i++) {
+                            if (!tReader.Files[i].IsDir) extractedFiles.push({ path: tReader.Files[i].Name, data: new Blob([tReader.Read(i)]) });
+                        }
+                    }
+
+                    // show extracted files
+                    resultList.innerHTML = "";
+                    extractedFiles.forEach(extFile => {
+                        const flatName = extFile.path.replace(/[/\\]/g, '.');
+                        const li = document.createElement('li');
+                        const a = document.createElement('a');
+                        a.href = URL.createObjectURL(extFile.data);
+                        a.download = flatName;
+                        a.className = "download-btn";
+                        a.innerHTML = `📄 <strong>${flatName}</strong> <small>(Click to download)</small>`;
+                        li.appendChild(a);
+                        resultList.appendChild(li);
+                    });
+                } else if (files.length > 0) {
+                    resultList.innerHTML = "<li>No file data inside.</li>";
+                }
+            } catch (e) {
+                resultList.innerHTML = "";
+                alert("Decryption failed: " + e.message);
+            }
+        };
+    </script>
+
+    <!-- public key tab -->
+    <script type="module">
+        // import module
+        import { Opsec } from 'https://cdn.jsdelivr.net/gh/k-atusa/USAG-Lib/Opsec/Opsec.js';
+        import { SymMaster, TestReader, TestWriter } from 'https://cdn.jsdelivr.net/gh/k-atusa/USAG-Lib/Bencrypt/Bencrypt.js';
+        import { Encode64, Decode64 } from 'https://cdn.jsdelivr.net/gh/k-atusa/USAG-Lib/Bencode/Bencode.js';
+        import { ZipWriter, ZipReader } from 'https://cdn.jsdelivr.net/gh/k-atusa/USAG-Lib/Szip/Szip.js';
+        import { TarWriter, TarReader } from 'https://cdn.jsdelivr.net/gh/k-atusa/USAG-Lib/Star/Star.js';
+
+        // get loaded key from settings tab
+        function getLoadedKey(id) {
+            const text = document.getElementById(`key-${id}`)?.value.trim();
+            if (!text) return null;
+            try {
+                return Decode64(text, "#");
+            } catch (e) {
+                try { return Decode64(text, "!"); } catch (err) { return null; }
+            }
+        }
+
+        // get image header
+        async function getPrehead(imgType) {
+            if (imgType === 'none' || imgType === 'bin') return new Uint8Array(0);
+            const iconRes = await fetch(`https://cdn.jsdelivr.net/gh/k-atusa/USAG-Lib/Icons/data/aes_${imgType}.${imgType}`);
+            const iconBuf = new Uint8Array(await iconRes.arrayBuffer());
+            const padLen = 128 - (iconBuf.length % 128);
+            const prehead = new Uint8Array(iconBuf.length + padLen);
+            prehead.set(iconBuf);
+            return prehead;
+        }
+
+        // safe download function
+        function safeDownload(blob, filename) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => {
+                if (document.body.contains(a)) document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }, 150);
+        }
+
+        // clear file selection utility
+        window.clearPkFileSelection = function () {
+            document.getElementById('pk-target-files').value = "";
+            document.getElementById('pk-result-list').innerHTML = "";
+        };
+
+        // download public key result text
+        window.downloadPkResultText = function () {
+            const text = document.getElementById('pk-result-text').value;
+            if (!text) return alert("No text to download.");
+            safeDownload(new Blob([text], { type: "text/plain" }), "yas-pk-msg.txt");
+        };
+
+        // --- 🔒 Encrypt ---
+        window.handlePkEncrypt = async function () {
+            // get UI values
+            const plainMsg = document.getElementById('pk-plain-text').value;
+            const secretMsg = document.getElementById('pk-secret-text').value;
+            const files = document.getElementById('pk-target-files').files;
+            const imgType = document.getElementById('pk-opt-img').value;
+            const packAlgo = document.getElementById('pk-opt-pack').value;
+            const symAlgo = document.getElementById('pk-opt-sym').value;
+            const asymAlgo = document.getElementById('pk-opt-asym').value;
+            const doSign = document.getElementById('pk-opt-sign').checked;
+
+            const peerPub = getLoadedKey('peer-pub');
+            const myPri = getLoadedKey('my-pri');
+
+            if (!peerPub) return alert("Peer public key is required. Please load it in Key Settings.");
+            if (doSign && !myPri) return alert("My private key is required for signing.");
+
+            try {
+                // make opsec object
+                const op = new Opsec();
+                op.Msg = plainMsg;
+                op.Smsg = secretMsg;
+                op.BodyInfo = new TextEncoder().encode(packAlgo);
+
+                if (files.length > 0) { // file mode
+                    document.getElementById('pk-result-text').value = "⏳ Encrypting files...";
+
+                    // pack files
+                    let packedBuffer;
+                    if (packAlgo === 'zip1') {
+                        const writer = new ZipWriter("", true);
+                        for (let i = 0; i < files.length; i++) await writer.WriteFile(files[i].name, files[i]);
+                        packedBuffer = await writer.Close();
+                    } else {
+                        const writer = new TarWriter("");
+                        for (let i = 0; i < files.length; i++) await writer.Write(files[i].name, files[i], false);
+                        packedBuffer = await writer.Close();
+                    }
+
+                    // set body size and algo
+                    const dummySm = new SymMaster(symAlgo, new Uint8Array(44));
+                    op.BodySize = dummySm.AfterSize(packedBuffer.length);
+                    op.BodyAlgo = symAlgo;
+
+                    // encrypt header
+                    const header = await op.Encpub(asymAlgo, peerPub, doSign ? myPri : null);
+                    const sm = new SymMaster(symAlgo, op.BodyKey);
+                    const encryptedBody = await sm.EnBin(packedBuffer);
+
+                    // write header and body
+                    const writer = new TestWriter();
+                    await op.Write(writer, header);
+                    await writer.write(encryptedBody);
+                    let yasData = writer.getValue();
+
+                    // wrap with prehead
+                    const prehead = await getPrehead(imgType);
+                    const wrapped = new Uint8Array(prehead.length + yasData.length);
+                    wrapped.set(prehead);
+                    wrapped.set(yasData, prehead.length);
+
+                    // download
+                    document.getElementById('pk-result-text').value = "✅ File encryption completed.";
+                    safeDownload(new Blob([wrapped]), `encrypted_pk.${imgType === 'none' ? 'yas' : imgType}`);
+
+                } else { // text mode encryption
+                    document.getElementById('pk-result-text').value = "⏳ Encrypting text...";
+                    const header = await op.Encpub(asymAlgo, peerPub, doSign ? myPri : null);
+
+                    // write header
+                    const writer = new TestWriter();
+                    await op.Write(writer, header);
+                    document.getElementById('pk-result-text').value = Encode64(writer.getValue(), "#", 80, 10);
+                }
+
+            } catch (e) { alert("Encryption failed: " + e.message); }
+        };
+
+        // --- 🔓 Decrypt ---
+        window.handlePkDecrypt = async function () {
+            // get UI values
+            const files = document.getElementById('pk-target-files').files;
+            const secretBoxText = document.getElementById('pk-secret-text').value;
+            const resultTextArea = document.getElementById('pk-result-text');
+            const resultList = document.getElementById('pk-result-list');
+
+            // check sign option
+            const doSign = document.getElementById('pk-opt-sign').checked;
+
+            const myPri = getLoadedKey('my-pri');
+            const myPub = getLoadedKey('my-pub');
+            const peerPub = getLoadedKey('peer-pub');
+
+            if (!myPri) return alert("My private key is required for decryption. Please load it in Key Settings.");
+            if (doSign && (!myPub || !peerPub)) return alert("Both My public key and Peer public key are required for signature verification.");
+
+            try {
+                // make opsec object
+                const op = new Opsec();
+                let headerData;
+                let fileReader = null;
+
+                if (files.length > 0) { // file mode
+                    resultList.innerHTML = "<li>⏳ Decrypting file...</li>";
+                    const fileData = new Uint8Array(await files[0].arrayBuffer());
+                    fileReader = new TestReader(fileData);
+                    headerData = await op.Read(fileReader);
+                } else { // text mode
+                    if (!secretBoxText.includes('#START#')) return alert("Ciphertext (#START#) is required.");
+                    const rawData = Decode64(secretBoxText, "#");
+                    const textReader = new TestReader(rawData);
+                    headerData = await op.Read(textReader);
+                }
+
+                // view header, decrypt
+                op.View(headerData);
+
+                // pass public keys only when sign option is enabled
+                const verifyMyPub = doSign ? myPub : null;
+                const verifyPeerPub = doSign ? peerPub : null;
+                let signStatus = "Sign verification skipped (option off)";
+
+                try {
+                    await op.Decpub(myPri, verifyMyPub, verifyPeerPub);
+                    if (doSign) {
+                        signStatus = "✅ Sign verification success";
+                    }
+                } catch (innerErr) {
+                    if (innerErr.message.includes("Sign verification failed")) {
+                        throw new Error("Sign verification failed. (file tampered or public key mismatch)");
+                    } else if (innerErr.message.includes("Both myPub and peerPub")) {
+                        throw new Error("Public keys required for sign verification are missing.");
+                    } else {
+                        throw innerErr;
+                    }
+                }
+
+                // show message
+                let combinedMsg = `[Sign Status: ${signStatus}]\n\n`;
+                if (op.Msg) combinedMsg += `[Public Message]\n${op.Msg}\n\n`;
+                if (op.Smsg) combinedMsg += `[Secure Message]\n${op.Smsg}`;
+                resultTextArea.value = combinedMsg;
+
+                // file mode
+                if (files.length > 0 && op.BodySize >= 0 && fileReader) {
+                    // get body info
+                    const symAlgo = op.BodyAlgo;
+                    const packAlgo = new TextDecoder().decode(op.BodyInfo) || "zip1";
+
+                    const reader = new TestReader(new Uint8Array(await files[0].arrayBuffer()));
+                    await op.Read(reader);
+                    const encBody = await reader.read(op.BodySize);
+
+                    // decrypt body
+                    const sm = new SymMaster(symAlgo, op.BodyKey);
+                    const packedBody = await sm.DeBin(encBody);
+
+                    // extract files
+                    let extractedFiles = [];
+                    if (packAlgo === 'zip1') {
+                        const zReader = new ZipReader(packedBody);
+                        await zReader.Init();
+                        for (let i = 0; i < zReader.Names.length; i++) extractedFiles.push({ path: zReader.Names[i], data: new Blob([await zReader.Read(i)]) });
+                    } else {
+                        const tReader = new TarReader(packedBody);
+                        await tReader.Init();
+                        for (let i = 0; i < tReader.Files.length; i++) {
+                            if (!tReader.Files[i].IsDir) extractedFiles.push({ path: tReader.Files[i].Name, data: new Blob([tReader.Read(i)]) });
+                        }
+                    }
+
+                    // show extracted files
+                    resultList.innerHTML = "";
+                    extractedFiles.forEach(extFile => {
+                        const flatName = extFile.path.replace(/[/\\]/g, '.');
+                        const li = document.createElement('li');
+                        const a = document.createElement('a');
+                        a.href = URL.createObjectURL(extFile.data);
+                        a.download = flatName;
+                        a.className = "download-btn";
+                        a.innerHTML = `📄 <strong>${flatName}</strong> <small>(Download)</small>`;
+                        li.appendChild(a);
+                        resultList.appendChild(li);
+                    });
+                } else if (files.length > 0) {
+                    resultList.innerHTML = "<li>No file data inside.</li>";
+                }
+            } catch (e) {
+                resultList.innerHTML = "";
+                alert("❌ Decryption failed: " + e.message);
+            }
+        };
+    </script>
+
+    <!-- key settings tab -->
+    <script type="module">
+        // import modules
+        import { AsymMaster } from 'https://cdn.jsdelivr.net/gh/k-atusa/USAG-Lib/Bencrypt/Bencrypt.js';
+        import { Crc32 } from 'https://cdn.jsdelivr.net/gh/k-atusa/USAG-Lib/Opsec/Opsec.js';
+        import { Encode64, Decode64 } from 'https://cdn.jsdelivr.net/gh/k-atusa/USAG-Lib/Bencode/Bencode.js';
+
+        const keyIDs = ['peer-pub', 'my-pub', 'my-pri'];
+
+        // update key info
+        window.updateKeyMetrics = function (id) {
+            const textarea = document.getElementById(`key-${id}`);
+            const text = textarea.value.trim();
+            const sizeEl = document.getElementById(`info-${id}-size`);
+            const crcEl = document.getElementById(`info-${id}-crc`);
+
+            if (!text) {
+                sizeEl.innerText = '0';
+                crcEl.innerText = '-';
+                return;
+            }
+
+            try {
+                // decode YAS format
+                const bin = Decode64(text, "#");
+                sizeEl.innerText = bin.length;
+                crcEl.innerText = Crc32(bin).toUpperCase(); // CRC32 calculation
+                updateSharedState();
+            } catch (e) {
+                crcEl.innerText = 'Invalid Format';
+            }
+        };
+
+        // generate key
+        window.handleGenKey = async function () {
+            const algo = document.getElementById('gen-algo').value;
+            if (!confirm(`${algo} algorithm to generate a new key pair? Existing my key will be replaced.`)) return;
+
+            try {
+                const am = new AsymMaster(algo);
+                const [pub, pri] = await am.Genkey(); // [pub, pri] Uint8Array return
+
+                // encode and insert into textbox
+                document.getElementById('key-my-pub').value = Encode64(pub, "#");
+                document.getElementById('key-my-pri').value = Encode64(pri, "#");
+
+                updateKeyMetrics('my-pub');
+                updateKeyMetrics('my-pri');
+                alert(`${algo} key pair generated successfully.`);
+            } catch (e) {
+                alert("Key generation failed: " + e.message);
+            }
+        };
+
+        // upload key
+        window.uploadKey = function (event, id) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                document.getElementById(`key-${id}`).value = e.target.result;
+                updateKeyMetrics(id);
+            };
+            reader.readAsText(file);
+        };
+
+        // download key
+        window.downloadKey = function (id) {
+            const text = document.getElementById(`key-${id}`).value;
+            if (!text) return alert("No key data to save.");
+            const blob = new Blob([text], { type: 'text/plain' });
+            triggerDownload(blob, `key_${id}.txt`);
+        };
+
+        // update shared state
+        function updateSharedState() {
+            const myPub = document.getElementById('key-my-pub').value;
+            const stateEl = document.querySelector('.shared-state small');
+            if (myPub) {
+                stateEl.innerHTML = `🔑 <strong>Key Status:</strong> My Private Loaded (CRC: ${document.getElementById('info-my-pub-crc').innerText})`;
+            }
+        }
+    </script>
+
+</body>
+
+</html>
