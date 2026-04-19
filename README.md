@@ -10,4 +10,6 @@
 
 - 1학년 강의 경쟁률 계산기
 
-last update : 2024.06.25
+- USAG-YAS web-lite 버전
+
+last update : 2026.04.19
