@@ -242,6 +242,9 @@
                     <option value="pbk2">pbk2</option>
                     <option value="sha3">sha3</option>
                 </select>
+                <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                    <input type="checkbox" id="pw-opt-pad" checked> Enable Padding
+                </label>
             </div>
         </div>
 
@@ -327,6 +330,9 @@
                 </select>
                 <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
                     <input type="checkbox" id="pk-opt-sign"> Enable Sign/Verify
+                </label>
+                <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                    <input type="checkbox" id="pk-opt-pad" checked> Enable Padding
                 </label>
             </div>
         </div>
@@ -440,6 +446,41 @@
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
+        }
+
+        // safe download function (with delayed cleanup)
+        function safeDownload(blob, filename) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => {
+                if (document.body.contains(a)) document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }, 150);
+        }
+
+        // get image header
+        async function getPrehead(imgType) {
+            if (imgType === 'none' || imgType === 'bin') return new Uint8Array(0);
+            const iconRes = await fetch(`https://cdn.jsdelivr.net/gh/k-atusa/USAG-Lib/Icons/data/aes_${imgType}.${imgType}`);
+            const iconBuf = new Uint8Array(await iconRes.arrayBuffer());
+            const padLen = 128 - (iconBuf.length % 128);
+            const prehead = new Uint8Array(iconBuf.length + padLen);
+            prehead.set(iconBuf);
+            return prehead;
+        }
+
+        // read text file to element
+        function readTextToElement(event, elementId) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => document.getElementById(elementId).value = e.target.result;
+            reader.readAsText(file);
         }
     </script>
 
@@ -616,54 +657,13 @@
     <!-- password tab -->
     <script type="module">
         // import module
-        import { Opsec, Crc32 } from 'https://cdn.jsdelivr.net/gh/k-atusa/USAG-Lib/Opsec/Opsec.js';
+        import { Opsec, Crc32, PadLen, PadFile } from 'https://cdn.jsdelivr.net/gh/k-atusa/USAG-Lib/Opsec/Opsec.js';
         import { SymMaster, HashMaster, TestReader, TestWriter } from 'https://cdn.jsdelivr.net/gh/k-atusa/USAG-Lib/Bencrypt/Bencrypt.js';
         import { Encode64, Decode64 } from 'https://cdn.jsdelivr.net/gh/k-atusa/USAG-Lib/Bencode/Bencode.js';
         import { ZipWriter, ZipReader } from 'https://cdn.jsdelivr.net/gh/k-atusa/USAG-Lib/Szip/Szip.js';
         import { TarWriter, TarReader } from 'https://cdn.jsdelivr.net/gh/k-atusa/USAG-Lib/Star/Star.js';
 
         window.currentPwKeyBuffer = new Uint8Array(0);
-
-        // safe download function
-        function safeDownload(blob, filename) {
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.style.display = 'none';
-            a.href = url;
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-            setTimeout(() => {
-                if (document.body.contains(a)) document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-            }, 150);
-        }
-
-        // get image header
-        async function getPrehead(imgType) {
-            if (imgType === 'none' || imgType === 'bin') return new Uint8Array(0);
-            const iconRes = await fetch(`https://cdn.jsdelivr.net/gh/k-atusa/USAG-Lib/Icons/data/aes_${imgType}.${imgType}`);
-            const iconBuf = new Uint8Array(await iconRes.arrayBuffer());
-            const padLen = 128 - (iconBuf.length % 128);
-            const prehead = new Uint8Array(iconBuf.length + padLen);
-            prehead.set(iconBuf);
-            return prehead;
-        }
-
-        // clear file selection utility
-        window.clearFileSelection = function () {
-            document.getElementById('pw-target-files').value = "";
-            document.getElementById('pw-result-list').innerHTML = "";
-        };
-
-        // read text to element
-        window.readTextToElement = function (event, elementId) {
-            const file = event.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = (e) => document.getElementById(elementId).value = e.target.result;
-            reader.readAsText(file);
-        };
 
         // download password result text
         window.downloadPwResultText = function () {
@@ -699,6 +699,7 @@
             const packAlgo = document.getElementById('pw-opt-pack').value;
             const symAlgo = document.getElementById('pw-opt-sym').value;
             const hashAlgo = document.getElementById('pw-opt-hash').value;
+            const enablePad = document.getElementById('pw-opt-pad').checked;
 
             try {
                 // make opsec object
@@ -732,21 +733,23 @@
                     const sm = new SymMaster(symAlgo, op.BodyKey);
                     const encryptedBody = await sm.EnBin(packedBuffer);
 
-                    // write header and body
+                    // write prehead, header and body
+                    const prehead = await getPrehead(imgType);
                     const writer = new TestWriter();
+                    await writer.write(prehead);
                     await op.Write(writer, header);
                     await writer.write(encryptedBody);
-                    let yasData = writer.getValue();
 
-                    // wrap with prehead
-                    const prehead = await getPrehead(imgType);
-                    const wrapped = new Uint8Array(prehead.length + yasData.length);
-                    wrapped.set(prehead);
-                    wrapped.set(yasData, prehead.length);
+                    // apply padding if enabled
+                    if (enablePad) {
+                        const totalSize = prehead.length + 4 + 2 + header.length + (header.length >= 65535 ? 2 : 0) + op.BodySize;
+                        const padSize = PadLen(totalSize);
+                        if (padSize > 0) await PadFile(writer, padSize);
+                    }
 
                     // download
                     document.getElementById('pw-result-text').value = "✅ File encryption completed.";
-                    safeDownload(new Blob([wrapped]), `encrypted.${imgType === 'none' ? 'yas' : imgType}`);
+                    safeDownload(new Blob([writer.getValue()]), `encrypted.${imgType === 'none' ? 'yas' : imgType}`);
 
                 } else { // text mode encryption
                     document.getElementById('pw-result-text').value = "⏳ Encrypting text...";
@@ -849,7 +852,7 @@
     <!-- public key tab -->
     <script type="module">
         // import module
-        import { Opsec } from 'https://cdn.jsdelivr.net/gh/k-atusa/USAG-Lib/Opsec/Opsec.js';
+        import { Opsec, PadLen, PadFile } from 'https://cdn.jsdelivr.net/gh/k-atusa/USAG-Lib/Opsec/Opsec.js';
         import { SymMaster, TestReader, TestWriter } from 'https://cdn.jsdelivr.net/gh/k-atusa/USAG-Lib/Bencrypt/Bencrypt.js';
         import { Encode64, Decode64 } from 'https://cdn.jsdelivr.net/gh/k-atusa/USAG-Lib/Bencode/Bencode.js';
         import { ZipWriter, ZipReader } from 'https://cdn.jsdelivr.net/gh/k-atusa/USAG-Lib/Szip/Szip.js';
@@ -864,32 +867,6 @@
             } catch (e) {
                 try { return Decode64(text, "!"); } catch (err) { return null; }
             }
-        }
-
-        // get image header
-        async function getPrehead(imgType) {
-            if (imgType === 'none' || imgType === 'bin') return new Uint8Array(0);
-            const iconRes = await fetch(`https://cdn.jsdelivr.net/gh/k-atusa/USAG-Lib/Icons/data/aes_${imgType}.${imgType}`);
-            const iconBuf = new Uint8Array(await iconRes.arrayBuffer());
-            const padLen = 128 - (iconBuf.length % 128);
-            const prehead = new Uint8Array(iconBuf.length + padLen);
-            prehead.set(iconBuf);
-            return prehead;
-        }
-
-        // safe download function
-        function safeDownload(blob, filename) {
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.style.display = 'none';
-            a.href = url;
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-            setTimeout(() => {
-                if (document.body.contains(a)) document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-            }, 150);
         }
 
         // clear file selection utility
@@ -916,6 +893,7 @@
             const symAlgo = document.getElementById('pk-opt-sym').value;
             const asymAlgo = document.getElementById('pk-opt-asym').value;
             const doSign = document.getElementById('pk-opt-sign').checked;
+            const enablePad = document.getElementById('pk-opt-pad').checked;
 
             const peerPub = getLoadedKey('peer-pub');
             const myPri = getLoadedKey('my-pri');
@@ -955,21 +933,23 @@
                     const sm = new SymMaster(symAlgo, op.BodyKey);
                     const encryptedBody = await sm.EnBin(packedBuffer);
 
-                    // write header and body
+                    // write prehead, header and body
+                    const prehead = await getPrehead(imgType);
                     const writer = new TestWriter();
+                    await writer.write(prehead);
                     await op.Write(writer, header);
                     await writer.write(encryptedBody);
-                    let yasData = writer.getValue();
 
-                    // wrap with prehead
-                    const prehead = await getPrehead(imgType);
-                    const wrapped = new Uint8Array(prehead.length + yasData.length);
-                    wrapped.set(prehead);
-                    wrapped.set(yasData, prehead.length);
+                    // apply padding if enabled
+                    if (enablePad) {
+                        const totalSize = prehead.length + 4 + 2 + header.length + (header.length >= 65535 ? 2 : 0) + op.BodySize;
+                        const padSize = PadLen(totalSize);
+                        if (padSize > 0) await PadFile(writer, padSize);
+                    }
 
                     // download
                     document.getElementById('pk-result-text').value = "✅ File encryption completed.";
-                    safeDownload(new Blob([wrapped]), `encrypted_pk.${imgType === 'none' ? 'yas' : imgType}`);
+                    safeDownload(new Blob([writer.getValue()]), `encrypted_pk.${imgType === 'none' ? 'yas' : imgType}`);
 
                 } else { // text mode encryption
                     document.getElementById('pk-result-text').value = "⏳ Encrypting text...";
