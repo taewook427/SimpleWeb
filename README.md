@@ -1,15 +1,8 @@
-# SimpleWeb
+# WebMain
 
-### 간단한 웹페이지 사용 프로젝트
+Main website with portal links, vercel images and D-Day trackers
 
-##### 현재 프로젝트 목록
-
-- 파이썬 코드 일치도 검사기
-
-- BK 슬롯머신
-
-- 1학년 강의 경쟁률 계산기
-
-- USAG-YAS web-lite 버전
-
-last update : 2026.04.19
+- gr1_test610: 연세대 1학년 강의 담은수 분석 Analysis of Yonsei Univ freshman lecture data
+- py_copycheck: 간단한 파이썬 코드 일치도 검사기 Simple Python Code Checker
+- devHistory: 프로젝트 개발사 Project History
+- YAS-web-lite: k-atusa/YAS의 경량화 웹 버전 Lightweight web version of k-atusa/YAS

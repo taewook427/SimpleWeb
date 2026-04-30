@@ -1,18 +1,259 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko" data-theme="dark">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>프로젝트_라이트_메인페이지</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Web Main</title>
+  
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+  
+  <style>
+    @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+    
+    :root {
+      --pico-font-family: 'Pretendard', sans-serif;
+      --pico-typography-spacing: 1.5rem;
+    }
+
+    @media (min-width: 1200px) {
+      .container {
+        max-width: 1400px;
+      }
+    }
+
+    .portal-nav {
+      margin-bottom: 3rem;
+    }
+    
+    .portal-grid {
+      display: grid;
+      gap: 0.75rem;
+      grid-template-columns: repeat(2, 1fr); /* portal grid default 2 */
+    }
+
+    @media (min-width: 768px) {
+      .portal-grid {
+        grid-template-columns: repeat(4, 1fr); /* portal grid tablet 4 */
+      }
+    }
+
+    @media (min-width: 1200px) {
+      .portal-grid {
+        grid-template-columns: repeat(8, 1fr); /* portal grid desktop 8 */
+      }
+    }
+
+    .portal-grid a {
+      text-align: center;
+      padding: 0.7rem 0.4rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-decoration: none;
+      color: white; 
+      border: none;
+      transition: filter 0.2s;
+      
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: block;
+      width: 100%;
+    }
+    .portal-grid a:hover {
+      filter: brightness(1.2);
+    }
+
+    .blocks-container {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }
+
+    @media (min-width: 992px) {
+      .blocks-container {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    /* D-Day Styles */
+    .dday-item { margin-bottom: 1.5rem; }
+    .dday-info {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-bottom: 0.3rem;
+    }
+    .dday-title { font-weight: 600; font-size: 0.95rem; }
+    .dday-percent {
+      color: var(--pico-primary);
+      font-weight: bold;
+      font-size: 0.85rem;
+      font-variant-numeric: tabular-nums; 
+    }
+    
+    progress.completed::-webkit-progress-value { background-color: #2e7d32; }
+    progress.completed::-moz-progress-bar { background-color: #2e7d32; }
+    progress.waiting::-webkit-progress-value { background-color: #424242; }
+    progress.waiting::-moz-progress-bar { background-color: #424242; }
+
+    progress { margin-bottom: 0.2rem; }
+    .dday-dates {
+      font-size: 0.7rem;
+      color: var(--pico-muted-color);
+      display: flex;
+      justify-content: space-between;
+    }
+    .tz-badge { font-weight: bold; opacity: 0.7; }
+    
+    .vercel-img {
+      width: 100%;
+      border-radius: var(--pico-border-radius);
+      display: block;
+    }
+  </style>
 </head>
 <body>
+  <main class="container">
     
-  <h1>2024.01.18</h1>
+    <section class="portal-nav">
+      <h2>Portals</h2>
+      <div class="portal-grid" id="portal-list"></div>
+    </section>
 
-  <p><a href="py_copycheck/index0.html">파이썬 코드 일치도 검사기</a></p>
-  <p><a href="this_is_bk/index1.html">BK 슬롯머신</a></p>
-  <p><a href="gr1_test610/test610.html">1학년 정원계산기</a></p>
-  <p><a href="YAS-web-lite/index.html">YAS-web lite</a></p>
-  
+    <section>
+      <h2>Dashboard</h2>
+      <div class="blocks-container">
+        
+        <article>
+          <header><strong>GitHub Languages</strong></header>
+          <img src="https://github-readme-stats.vercel.app/api/top-langs/?username=taewook427&layout=compact&hide_border=true&bg_color=00000000&langs_count=8&theme=dark" alt="GitHub Languages" class="vercel-img">
+        </article>
+
+        <article>
+          <header><strong>Project Progress</strong></header>
+          <div id="dday-container"></div>
+        </article>
+
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    // Portal Links and D-Day data
+    const appConfig = {
+      portals: [
+        { name: 'My Github', url: 'https://github.com/taewook427', color: '#24292F' },
+        { name: 'My History', url: '#', color: '#64748B' },
+        { name: 'Y-Med Grade1', url: './gr1_test610/test610.html', color: '#2563EB' },
+        { name: 'Py Copy Check', url: './py_copycheck/index.html', color: '#3776AB' },
+        { name: 'Github k-atusa', url: 'https://github.com/k-atusa', color: '#1F2328' },
+        { name: 'KATUSA OS web', url: 'https://katusa.space/', color: '#4D7C0F' },
+        { name: 'YAS-web', url: '#', color: '#7C3AED' },
+        { name: 'YAS-web lite', url: './YAS-web-lite/index.html', color: '#A855F7' },
+        { name: 'Zkzzk', url: '#', color: '#059669' },
+        { name: 'Barracks Design', url: 'https://barracks-layout-simulator.vercel.app', color: '#E11D48' },
+        { name: 'ASMR', url: '#', color: '#0D9488' },
+        { name: 'ASS', url: '#', color: '#D97706' },
+        { name: 'UpTime', url: '#', color: '#0284C7' },
+      ],
+      projects: [
+        { title: 'Cycle 06-25 ETS', start: '2025-03-04T00:00:00', end: '2026-09-03T23:59:59', tz: 'KST' },
+        { title: '본과 진입', start: '2023-03-02T09:00:00', end: '2028-02-01T00:00:00', tz: 'KST' },
+      ] // tz: KST or UTC
+    };
+  </script>
+
+  <script>
+    const progressElements = [];
+
+    // parse date with timezone
+    function parseDateWithTimezone(dateString, tz) {
+      const tzSuffix = (tz === 'KST') ? '+09:00' : 'Z';
+      return new Date(`${dateString}${tzSuffix}`).getTime();
+    }
+
+    // init portal links
+    function initPortals() {
+      const list = document.getElementById('portal-list');
+      appConfig.portals.forEach(p => {
+        const a = document.createElement('a');
+        a.href = p.url;
+        a.textContent = p.name;
+        a.setAttribute('role', 'button');
+        a.style.backgroundColor = p.color;
+        a.title = p.name;
+        list.appendChild(a);
+      });
+    }
+
+    // init project progress
+    function initProgressDDays() {
+      const container = document.getElementById('dday-container');
+      appConfig.projects.forEach(pj => {
+        const startTime = parseDateWithTimezone(pj.start, pj.tz);
+        const endTime = parseDateWithTimezone(pj.end, pj.tz);
+        const item = document.createElement('div');
+        item.className = 'dday-item';
+        const infoDiv = document.createElement('div');
+        infoDiv.className = 'dday-info';
+        const titleSpan = document.createElement('span');
+        titleSpan.className = 'dday-title';
+        titleSpan.textContent = pj.title;
+        const percentSpan = document.createElement('span');
+        percentSpan.className = 'dday-percent';
+        const progressBar = document.createElement('progress');
+        progressBar.max = 100;
+        const datesSmall = document.createElement('small');
+        datesSmall.className = 'dday-dates';
+        datesSmall.innerHTML = `<span>${pj.start.replace('T', ' ')} ~ ${pj.end.replace('T', ' ')}</span> <span class="tz-badge">${pj.tz}</span>`;
+        infoDiv.appendChild(titleSpan);
+        infoDiv.appendChild(percentSpan);
+        item.appendChild(infoDiv);
+        item.appendChild(progressBar);
+        item.appendChild(datesSmall);
+        container.appendChild(item);
+        progressElements.push({
+          start: startTime,
+          end: endTime,
+          total: endTime - startTime,
+          percentElement: percentSpan,
+          progressElement: progressBar
+        });
+      });
+      requestAnimationFrame(updateProgressLoop);
+    }
+
+    // update progress
+    function updateProgressLoop() {
+      const now = Date.now(); 
+      progressElements.forEach(item => {
+        const elapsed = now - item.start;
+        let percent = (elapsed / item.total) * 100;
+        let statusText = '';
+        item.progressElement.className = '';
+        if (percent <= 0) {
+          percent = 0;
+          statusText = '대기 (0.0000000%)';
+          item.progressElement.classList.add('waiting');
+        } else if (percent >= 100) {
+          percent = 100;
+          statusText = '완료 (100.0000000%)';
+          item.progressElement.classList.add('completed');
+        } else {
+          const remainingDays = Math.ceil((item.end - now) / (1000 * 60 * 60 * 24));
+          statusText = `D-${remainingDays} (${percent.toFixed(7)}%)`;
+        }
+        if (item.percentElement.textContent !== statusText) {
+          item.percentElement.textContent = statusText;
+          item.progressElement.value = percent;
+        }
+      });
+      requestAnimationFrame(updateProgressLoop);
+    }
+
+    setTimeout(initPortals, 0.1);
+    setTimeout(initProgressDDays, 0.1);
+  </script>
 </body>
 </html>
