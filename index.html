@@ -4,7 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Web Main</title>
-  
+
+  <link rel="icon" type="image/png" href="./favicon.png">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
   
   <style>
@@ -126,7 +127,7 @@
         
         <article>
           <header><strong>GitHub Languages</strong></header>
-          <img src="https://github-readme-stats.vercel.app/api/top-langs/?username=taewook427&layout=compact&hide_border=true&bg_color=00000000&langs_count=8&theme=dark" alt="GitHub Languages" class="vercel-img">
+          <img src="https://github-readme-stats.vercel.app/api/top-langs/?username=taewook427&layout=compact&hide_border=true&bg_color=00000000&langs_count=10&theme=dark" alt="GitHub Languages" class="vercel-img">
         </article>
 
         <article>
@@ -143,19 +144,20 @@
     // Portal Links and D-Day data
     const appConfig = {
       portals: [
-        { name: 'My Github', url: 'https://github.com/taewook427', color: '#24292F' },
-        { name: 'My History', url: '#', color: '#64748B' },
-        { name: 'Y-Med Grade1', url: './gr1_test610/test610.html', color: '#2563EB' },
-        { name: 'Py Copy Check', url: './py_copycheck/index.html', color: '#3776AB' },
+        { name: 'Github Main', url: 'https://github.com/taewook427', color: '#24292F' },
+        { name: 'Dev History', url: './devHistory/index.html', color: '#64748B' },
         { name: 'Github k-atusa', url: 'https://github.com/k-atusa', color: '#1F2328' },
         { name: 'KATUSA OS web', url: 'https://katusa.space/', color: '#4D7C0F' },
         { name: 'YAS-web', url: '#', color: '#7C3AED' },
         { name: 'YAS-web lite', url: './YAS-web-lite/index.html', color: '#A855F7' },
         { name: 'Zkzzk', url: '#', color: '#059669' },
         { name: 'Barracks Design', url: 'https://barracks-layout-simulator.vercel.app', color: '#E11D48' },
+        { name: 'UpTime', url: '#', color: '#0284C7' },
         { name: 'ASMR', url: '#', color: '#0D9488' },
         { name: 'ASS', url: '#', color: '#D97706' },
-        { name: 'UpTime', url: '#', color: '#0284C7' },
+        { name: 'Y-Med Grade1', url: './gr1_test610/test610.html', color: '#2563EB' },
+        { name: 'Y-Med LTeam2', url: 'https://taewook427.github.io/lteam_test/', color: '#E6C619' },
+        { name: 'Py Copy Check', url: './py_copycheck/index.html', color: '#3776AB' },
       ],
       projects: [
         { title: 'Cycle 06-25 ETS', start: '2025-03-04T00:00:00', end: '2026-09-03T23:59:59', tz: 'KST' },
@@ -226,12 +228,26 @@
 
     // update progress
     function updateProgressLoop() {
-      const now = Date.now(); 
+      // get current time and date
+      const now = Date.now();
+      const nowDate = new Date();
+      nowDate.setHours(0, 0, 0, 0);
+      const todayMidnight = nowDate.getTime();
+
       progressElements.forEach(item => {
+        // calculate progress
         const elapsed = now - item.start;
         let percent = (elapsed / item.total) * 100;
+        
+        // calculate remaining days
+        const endDate = new Date(item.end);
+        endDate.setHours(0, 0, 0, 0);
+        const endMidnight = endDate.getTime();
+        const remainingDays = Math.round((endMidnight - todayMidnight) / (1000 * 60 * 60 * 24));
+
         let statusText = '';
         item.progressElement.className = '';
+
         if (percent <= 0) {
           percent = 0;
           statusText = '대기 (0.0000000%)';
@@ -241,9 +257,13 @@
           statusText = '완료 (100.0000000%)';
           item.progressElement.classList.add('completed');
         } else {
-          const remainingDays = Math.ceil((item.end - now) / (1000 * 60 * 60 * 24));
-          statusText = `D-${remainingDays} (${percent.toFixed(7)}%)`;
+          if (remainingDays === 0) {
+            statusText = `D-Day (${percent.toFixed(7)}%)`;
+          } else {
+            statusText = `D-${remainingDays} (${percent.toFixed(7)}%)`;
+          }
         }
+        
         if (item.percentElement.textContent !== statusText) {
           item.percentElement.textContent = statusText;
           item.progressElement.value = percent;
