@@ -37,6 +37,7 @@ py-copycheck,Python Copy Check,taewook427,https://github.com/taewook427/WebMain,
 dev-history,Dev History,taewook427,https://github.com/taewook427/WebMain,JavaScript CSV,개별 프로젝트의 기술 도메인 세대 영향 관계를 시각화하는 인터랙티브 그래프  An interactive graph that visualizes the technical domains generations and dependencies of projects
 kzip-lite,Online Compressor,taewook427,https://github.com/taewook427/WebMain,JavaScript,다양한 포맷을 지원하는 온라인 압축과 해제 도구  Online compressing tool with various formats
 webclock,온라인 시계,taewook427,https://github.com/taewook427/WebMain,JavaScript,온라인 초단위시계 타이머 스탑워치  Online clock timer stopwatch
+korizen,KorizenBench,taewook427,https://github.com/taewook427/CSAItest,AI BenchMark Reasoning Puzzle,암호퍼즐 기반 시각 장기추론 벤치마크  Optic long-term reasoning bench based on crypto puzzle
 
 k1-kdm,KDM1,taewook427,https://github.com/taewook427/Kutil4,Python TkInter SHA2,초기형 파일 암호화 앱으로 알고리즘에 결함이 있었다  Early file encryption that has algorithm flaws
 k1-time,Windows Timer 1,taewook427,https://github.com/taewook427/Kutil4,Python TkInter,간단한 초단위 시계  A simple second clock
